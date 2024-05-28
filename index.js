@@ -13,6 +13,10 @@ app.use(express.json());
 
 const prismaClient = new PrismaClient();
 
+app.get("/", (req, res) => {
+  return res.send({ message: "Hello from server!" });
+});
+
 app.use("/user", userRouter);
 app.use("/transaction", transactionRouter);
 app.use("/category", categoryRouter);
@@ -26,26 +30,33 @@ app.get("/reports/monthly", authenticateToken, async (req, res) => {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0);
 
-  const transactions = await prismaClient.transaction.findMany({
-    where: {
-      userId,
-      date: { gte: startDate, lte: endDate },
-    },
-  });
+  try {
+    const transactions = await prismaClient.transaction.findMany({
+      where: {
+        userId,
+        date: { gte: startDate, lte: endDate },
+      },
+    });
 
-  const income = transactions
-    .filter((t) => t.type === "INCOME")
-    .reduce((sum, t) => sum + t.amount, 0);
-  const expenses = transactions
-    .filter((t) => t.type === "EXPENSE")
-    .reduce((sum, t) => sum + t.amount, 0);
+    const income = transactions
+      .filter((t) => t.type === "INCOME")
+      .reduce((sum, t) => sum + t.amount, 0);
+    const expenses = transactions
+      .filter((t) => t.type === "EXPENSE")
+      .reduce((sum, t) => sum + t.amount, 0);
 
-  res.json({
-    income,
-    expenses,
-    balance: income - expenses,
-    transactions,
-  });
+    res.status(200).json({
+      message: "Success",
+      data: {
+        income,
+        expenses,
+        balance: income - expenses,
+        transactions,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({ message: "Error Occured", error: error.message });
+  }
 });
 
 const PORT = process.env.PORT || 3000;
